@@ -1,24 +1,23 @@
 %% DE LAVAL NOZZLE DESIGN CALCULATOR
-% Ideal 1-D, steady, isentropic flow of a calorically perfect gas.
-% Run this entire script. Change inputs only in Section 1.
+
 clear; clc; close all;
 
-% Edit These Inputs 
+% Edit ONLY These Inputs 
 gamma = 1.4;          % specific heat ratio
 R = 287.05;          % gas constant for air [J/(kg*K)]
-P0_psia = 100;        % inlet stagnation pressure [psia, absolute]
-T0 = 300;            % inlet stagnation temperature [K]
-Pa_psia = 14.7;      % ambient/back pressure [psia, absolute]
-Me = 2;            % desired exit Mach number (>1)
+P0_psia = 100;        % inlet stagnation pressure
+T0 = 300;            % inlet stagnation temperature [Kelvin]
+Pa_psia = 14.7;      % back pressure 
+Me = 2;            % exit Mach number 
 Dt_mm = 10;          % throat diameter [mm]
-Din_mm = 20;         % inlet diameter [mm], must exceed throat
-alpha_deg = 20;      % converging WALL HALF-ANGLE [deg]
-beta_deg = 10;       % diverging WALL HALF-ANGLE [deg]
+Din_mm = 20;         % inlet diameter [mm] (should be bigger than the throat)
+alpha_deg = 20;      % converging wall section[deg]
+beta_deg = 10;       % diverging wall section [deg]
 nCon = 100;          % samples in converging section
 nDiv = 150;          % samples in diverging section
-exportCSV = true;    % save contour points for CAD
+exportCSV = true;    % supposed to save contour points for CAD
 
-%% 2. UNIT CONVERSIONS AND INPUT VALIDATION
+
 % P[Pa] = P[psia] * 6894.757293; D[m] = D[mm]/1000.
 assert(gamma>1 && R>0 && T0>0 && P0_psia>0 && Pa_psia>0, ...
     'Gas properties, temperature and absolute pressures must be positive.');
@@ -27,38 +26,38 @@ assert(Dt_mm>0 && Din_mm>Dt_mm, 'Inlet diameter must exceed throat diameter.');
 assert(alpha_deg>0 && alpha_deg<90 && beta_deg>0 && beta_deg<90, ...
     'Wall half-angles must lie between 0 and 90 degrees.');
 assert(nCon>=2 && nDiv>=2, 'At least two points per nozzle section are required.');
-P0 = P0_psia*6894.757293;  % [Pa]
-Pa = Pa_psia*6894.757293;  % [Pa]
-Dt = Dt_mm/1000;           % [m]
-Din = Din_mm/1000;         % [m]
+P0 = P0_psia*6894.757293;  
+Pa = Pa_psia*6894.757293;  
+Dt = Dt_mm/1000;           
+Din = Din_mm/1000;        
 
-%% 3. THROAT AND EXIT AREA
+%Throat and exit area
 % A* = pi*Dt^2/4 (Throat area)
 At = pi*Dt^2/4;  % throat area [m^2]
 % Ae/A* = (1/Me)*[(2/(gamma+1))*(1+(gamma-1)*Me^2/2)]^((gamma+1)/(2*(gamma-1))) 
 areaMach = @(M) (1./M).*((2/(gamma+1)).* ...
     (1+(gamma-1).*M.^2/2)).^((gamma+1)/(2*(gamma-1)));
-expansionRatio = areaMach(Me);  % Ae/At, dimensionless
-Ae = At*expansionRatio;         % exit area [m^2]
+expansionRatio = areaMach(Me);  
+Ae = At*expansionRatio;         
 % D = sqrt(4*A/pi)
-De = sqrt(4*Ae/pi);             % exit diameter [m]
+De = sqrt(4*Ae/pi);             
 
-%% 4. WALL GEOMETRY 
+%wall geometry 
 % L = (r_large-r_small)/tan(wall half-angle)
-Lc = ((Din-Dt)/2)/tand(alpha_deg);  % converging length [m]
-Ld = ((De-Dt)/2)/tand(beta_deg);   % diverging length [m]
+Lc = ((Din-Dt)/2)/tand(alpha_deg);  
+Ld = ((De-Dt)/2)/tand(beta_deg);   
 % Coordinate x=0 at throat; inlet at -Lc, exit at +Ld.
 xCon = linspace(-Lc,0,nCon);
 xDiv = linspace(0,Ld,nDiv);
 rCon = Dt/2 + (-xCon)*tand(alpha_deg);
 rDiv = Dt/2 + xDiv*tand(beta_deg);
-x = [xCon xDiv(2:end)];           % axial coordinates [m]
-r = [rCon rDiv(2:end)];           % inner radius [m]
-A = pi*r.^2;                      % local flow area [m^2]
-AR = A/At;                        % local area ratio
+x = [xCon xDiv(2:end)];         
+r = [rCon rDiv(2:end)];           
+A = pi*r.^2;                    
+AR = A/At;                       
 
-%% 5. SOLVING AREA-MACH EQUATION ALONG THE NOZZLE
-% For A/A* > 1, two solutions exist: subsonic and supersonic.
+% area and mach equations along nozzle
+
 M = ones(size(x));
 for k = 1:numel(x)
     if abs(x(k))<1e-12
@@ -70,41 +69,37 @@ for k = 1:numel(x)
     end
 end
 
-%% 6. ISENTROPIC PRESSURE AND TEMPERATURE
+% isentropic P and T
 % T/T0 = 1/[1+(gamma-1)*M^2/2]
-T = T0./(1+(gamma-1).*M.^2/2);         % static temperature [K]
+T = T0./(1+(gamma-1).*M.^2/2);       
 % P/P0 = [1+(gamma-1)*M^2/2]^(-gamma/(gamma-1))
-P = P0.*(1+(gamma-1).*M.^2/2).^(-gamma/(gamma-1)); % static pressure [Pa]
+P = P0.*(1+(gamma-1).*M.^2/2).^(-gamma/(gamma-1));
 
-%% 7. IDEAL GAS LAW, SPEED OF SOUND, AND VELOCITY
+% ideal gas law, speed of sound and velocity
 % rho = P/(R*T)
-rho = P./(R.*T);                        % local density [kg/m^3]
+rho = P./(R.*T);                       
 % a = sqrt(gamma*R*T); V = M*a
-a = sqrt(gamma*R.*T);                  % local sound speed [m/s]
-V = M.*a;                              % local velocity [m/s]
+a = sqrt(gamma*R.*T);                  
+V = M.*a;                              
 
-%% 8. MASS FLOW RATE (CHOKED THROAT)
+%Mass flow rate at choked throat section
 % mdot = rho*A*V, evaluated at the throat (M=1).
-Tt = T0/(1+(gamma-1)/2);                % throat static T [K]
-Pt = P0*(1+(gamma-1)/2)^(-gamma/(gamma-1)); % throat static P [Pa]
-rhot = Pt/(R*Tt);                       % throat density [kg/m^3]
-Vt = sqrt(gamma*R*Tt);                  % throat velocity [m/s]
-mdot = rhot*At*Vt;                      % mass flow rate [kg/s]
-mdotProfile = rho.*A.*V;               % continuity check [kg/s]
+Tt = T0/(1+(gamma-1)/2);               
+Pt = P0*(1+(gamma-1)/2)^(-gamma/(gamma-1)); 
+rhot = Pt/(R*Tt);                     
+Vt = sqrt(gamma*R*Tt);                 
+mdot = rhot*At*Vt;                      
+mdotProfile = rho.*A.*V;             
 
-%% 9. BACK-PRESSURE CHECK 
-% Ideal adapted expansion requires Pe approximately equal to Pa.
-% Pe != Pa can lead to under/over-expansion and shocks/separation.
-Pe = P(end);                           % ideal exit static pressure [Pa]
+%pressure check
+
+Pe = P(end);                           
 pressureMismatch = (Pe-Pa)/Pa;
 criticalRatio = (2/(gamma+1))^(gamma/(gamma-1)); % P*/P0
 
-%% 10. IDEAL THRUST ESTIMATE (OPTIONAL, 1-D)
-% F = mdot*Ve + (Pe-Pa)*Ae, assuming negligible inlet momentum.
-
 Fideal = mdot*V(end)+(Pe-Pa)*Ae;        % [N]
 
-%% 11. PRINT ENGINEERING RESULTS
+% Results Section
 fprintf('\n=== DE LAVAL NOZZLE: IDEAL DESIGN ===\n');
 fprintf('Inlet diameter         : %.3f mm\n',Din*1000);
 fprintf('Throat diameter        : %.3f mm\n',Dt*1000);
@@ -158,9 +153,8 @@ subplot(3,2,6)
 plot(x*1000,rho,'LineWidth',1.8); xline(0,'--k');
 grid on; xlabel('Axial position (mm)'); ylabel('Density (kg/m^3)'); title('Density');
 
-%% 13. EXPORT CONTOUR AND FLOW DATA FOR CAD/REPORT
-% x_mm and radius_mm define the inner nozzle wall profile.
-% Revolve the profile about the x axis to construct the flow passage.
+% .csv file export 
+
 if exportCSV
     results = table(x(:)*1000,r(:)*1000,A(:)*1e6,M(:), ...
         P(:)/6894.757293,T(:),V(:),rho(:), ...
