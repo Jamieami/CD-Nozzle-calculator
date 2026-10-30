@@ -18,7 +18,6 @@ nDiv = 150;          % samples in diverging section
 exportCSV = true;    % supposed to save contour points for CAD
 
 
-% P[Pa] = P[psia] * 6894.757293; D[m] = D[mm]/1000.
 assert(gamma>1 && R>0 && T0>0 && P0_psia>0 && Pa_psia>0, ...
     'Gas properties, temperature and absolute pressures must be positive.');
 assert(Me>1, 'Use a target exit Mach number greater than 1.');
@@ -33,13 +32,13 @@ Din = Din_mm/1000;
 
 %Throat and exit area
 % A* = pi*Dt^2/4 (Throat area)
-At = pi*Dt^2/4;  % throat area [m^2]
+At = pi*Dt^2/4; 
 % Ae/A* = (1/Me)*[(2/(gamma+1))*(1+(gamma-1)*Me^2/2)]^((gamma+1)/(2*(gamma-1))) 
 areaMach = @(M) (1./M).*((2/(gamma+1)).* ...
     (1+(gamma-1).*M.^2/2)).^((gamma+1)/(2*(gamma-1)));
 expansionRatio = areaMach(Me);  
 Ae = At*expansionRatio;         
-% D = sqrt(4*A/pi)
+
 De = sqrt(4*Ae/pi);             
 
 %wall geometry 
@@ -91,13 +90,11 @@ Vt = sqrt(gamma*R*Tt);
 mdot = rhot*At*Vt;                      
 mdotProfile = rho.*A.*V;             
 
-%pressure check
-
 Pe = P(end);                           
 pressureMismatch = (Pe-Pa)/Pa;
-criticalRatio = (2/(gamma+1))^(gamma/(gamma-1)); % P*/P0
+criticalRatio = (2/(gamma+1))^(gamma/(gamma-1)); 
 
-Fideal = mdot*V(end)+(Pe-Pa)*Ae;        % [N]
+Fideal = mdot*V(end)+(Pe-Pa)*Ae;       
 
 % Results Section
 fprintf('\n=== DE LAVAL NOZZLE: IDEAL DESIGN ===\n');
