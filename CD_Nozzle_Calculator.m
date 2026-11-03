@@ -1,5 +1,3 @@
-%% DE LAVAL NOZZLE DESIGN CALCULATOR
-
 clear; clc; close all;
 
 % Edit ONLY These Inputs 
@@ -17,7 +15,12 @@ nCon = 100;          % samples in converging section
 nDiv = 150;          % samples in diverging section
 exportCSV = true;    % supposed to save contour points for CAD
 
-
+% Air-property constants
+Tref = 273;          % reference temperature [K]
+muRef = 1.716e-5;    % reference viscosity [Pa*s]
+kRef = 0.0241;       % reference thermal conductivity [W/(m*K)]
+Smu = 111;          % viscosity constant [K]
+Sk = 194;           % conductivity constant [K]
 assert(gamma>1 && R>0 && T0>0 && P0_psia>0 && Pa_psia>0, ...
     'Gas properties, temperature and absolute pressures must be positive.');
 assert(Me>1, 'Use a target exit Mach number greater than 1.');
@@ -126,6 +129,41 @@ else
     fprintf('BACK PRESSURE: overexpanded ideal exit (Pe < Pa).\n');
     %fprintf('Shocks/separation may occur; actual flow not solved.\n');
 end
+
+
+%%%%%% adding Dimensionless numbers 
+
+% Local gas properties using local STATIC temperature T
+muGas = muRef.*(T./Tref).^1.5.*(Tref + Smu)./(T + Smu);
+kGas = kRef.*(T./Tref).^1.5.*(Tref + Sk)./(T + Sk);
+
+% cp = gamma*R/(gamma - 1)
+cpGas = gamma*R/(gamma - 1);     % gas specific heat [J/(kg*K)]
+
+% Hydraulic diameter = inside diameter for a circular passage
+Dh = 2*r;                      % local nozzle diameter [m]
+
+% Reynolds: Re = rho*V*Dh/mu ----- Inertia compared with viscous effects
+Re = rho.*V.*Dh./muGas;
+
+% Prandtl: Pr = mu*cp/k  ------- Momentum diffusion compared with thermal diffusion
+Pr = muGas.*cpGas./kGas;
+
+% Thermal Peclet: Peclet = Re*Pr --------------	Heat carried by flow compared with thermal diffusion
+Peclet = Re.*Pr;
+
+% Your throat is at index nCon
+fprintf('\n=== DIMENSIONLESS NUMBERS ===\n');
+
+fprintf('Throat Reynolds : %.3e\n', Re(nCon));
+fprintf('Exit Reynolds   : %.3e\n', Re(end));
+
+fprintf('Throat Prandtl  : %.3f\n', Pr(nCon));
+fprintf('Exit Prandtl    : %.3f\n', Pr(end));
+
+fprintf('Throat Peclet   : %.3e\n', Peclet(nCon));
+fprintf('Exit Peclet     : %.3e\n', Peclet(end));
+
 
 %% 12. PLOTS: NOZZLE GEOMETRY AND FLOW PROPERTIES
 figure('Name','De Laval Nozzle Calculator','Color','w');
